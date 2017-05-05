@@ -27,7 +27,7 @@ prompt APPLICATION 103 - Grants Generator
 -- Application Export:
 --   Application:     103
 --   Name:            Grants Generator
---   Date and Time:   17:51 Friday November 11, 2016
+--   Date and Time:   09:38 Friday May 5, 2017
 --   Exported By:     HR
 --   Flashback:       0
 --   Export Type:     Application Export
@@ -43,12 +43,15 @@ prompt APPLICATION 103 - Grants Generator
 --     Buttons:                  3
 --   Shared Components:
 --     Logic:
+--       Items:                  1
+--       Computations:           1
 --     Navigation:
 --       Lists:                  2
 --       Breadcrumbs:            1
 --         Entries:              1
 --     Security:
 --       Authentication:         1
+--       Authorization:          1
 --     User Interface:
 --       Themes:                 1
 --       Templates:
@@ -64,6 +67,7 @@ prompt APPLICATION 103 - Grants Generator
 --     Globalization:
 --     Reports:
 --   Supporting Objects:  Included
+--     Validations:              1
 
 prompt --application/delete_application
 begin
@@ -94,7 +98,7 @@ wwv_flow_api.create_flow(
 ,p_authentication=>'PLUGIN'
 ,p_authentication_id=>wwv_flow_api.id(14503603235943485)
 ,p_application_tab_set=>0
-,p_logo_image=>'TEXT:TEST'
+,p_logo_image=>'TEXT:Grants Generator'
 ,p_public_user=>'APEX_PUBLIC_USER'
 ,p_proxy_server=> nvl(wwv_flow_application_install.get_proxy,'')
 ,p_flow_version=>'release 1.0'
@@ -106,7 +110,7 @@ wwv_flow_api.create_flow(
 ,p_rejoin_existing_sessions=>'N'
 ,p_csv_encoding=>'Y'
 ,p_last_updated_by=>'HR'
-,p_last_upd_yyyymmddhh24miss=>'20161111175004'
+,p_last_upd_yyyymmddhh24miss=>'20170505093837'
 ,p_file_prefix => nvl(wwv_flow_application_install.get_static_app_file_prefix,'')
 ,p_ui_type_name => null
 );
@@ -170,7 +174,20 @@ end;
 /
 prompt --application/shared_components/security/authorizations
 begin
-null;
+wwv_flow_api.create_security_scheme(
+ p_id=>wwv_flow_api.id(14830311237443138)
+,p_name=>'Check SYNONYM'
+,p_scheme_type=>'NATIVE_EXISTS'
+,p_attribute_01=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+'select * ',
+'from user_objects ',
+'where object_name = ''WWV_FLOW_THEME_MANAGER'' ',
+'and object_type = ''SYNONYM'''))
+,p_error_message=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+'Synonym for WWV_FLOW_THEME_MANAGER not found.',
+'Please see Readme.md for Grants Generator!'))
+,p_caching=>'BY_USER_BY_SESSION'
+);
 end;
 /
 prompt --application/shared_components/navigation/navigation_bar
@@ -185,12 +202,29 @@ end;
 /
 prompt --application/shared_components/logic/application_items
 begin
-null;
+wwv_flow_api.create_flow_item(
+ p_id=>wwv_flow_api.id(14810452249386206)
+,p_name=>'APEX_INSTANCE_USER_NAME'
+,p_protection_level=>'I'
+);
 end;
 /
 prompt --application/shared_components/logic/application_computations
 begin
-null;
+wwv_flow_api.create_flow_computation(
+ p_id=>wwv_flow_api.id(14810861978389757)
+,p_computation_sequence=>10
+,p_computation_item=>'APEX_INSTANCE_USER_NAME'
+,p_computation_point=>'ON_NEW_INSTANCE'
+,p_computation_type=>'QUERY'
+,p_computation_processed=>'REPLACE_EXISTING'
+,p_computation=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+'select table_owner ',
+'from all_synonyms ',
+'where synonym_name = ''APEX_APPLICATION''',
+'  and owner = ''PUBLIC''  '))
+,p_computation_error_message=>'Can''t detect APEX DB schema name'
+);
 end;
 /
 prompt --application/shared_components/navigation/tabs/standard
@@ -7577,13 +7611,13 @@ wwv_flow_api.create_page(
 ,p_first_item=>'NO_FIRST_ITEM'
 ,p_step_template=>wwv_flow_api.id(14464303295943159)
 ,p_page_template_options=>'#DEFAULT#'
-,p_dialog_chained=>'Y'
+,p_required_role=>wwv_flow_api.id(14830311237443138)
 ,p_overwrite_navigation_list=>'N'
 ,p_page_is_public_y_n=>'N'
 ,p_cache_mode=>'NOCACHE'
 ,p_help_text=>'No help is available for this page.'
 ,p_last_updated_by=>'HR'
-,p_last_upd_yyyymmddhh24miss=>'20161111175004'
+,p_last_upd_yyyymmddhh24miss=>'20170505093409'
 );
 wwv_flow_api.create_page_plug(
  p_id=>wwv_flow_api.id(14520787546010701)
@@ -7690,6 +7724,7 @@ wwv_flow_api.create_page_plug(
 ,p_plug_display_sequence=>30
 ,p_include_in_reg_disp_sel_yn=>'Y'
 ,p_plug_display_point=>'BODY_1'
+,p_plug_query_row_template=>1
 ,p_plug_query_options=>'DERIVED_REPORT_COLUMNS'
 ,p_attribute_01=>'N'
 ,p_attribute_02=>'HTML'
@@ -7786,8 +7821,7 @@ wwv_flow_api.create_page_process(
 ,p_process_type=>'NATIVE_PLSQL'
 ,p_process_name=>'Compute Dependencies'
 ,p_process_sql_clob=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
-'',
-'apex_050000.wwv_flow_theme_manager.find_object_dependencies(p_flow_id=>:P1_APP_ID,p_page_id=>null);',
+'wwv_flow_theme_manager.find_object_dependencies(p_flow_id=>:P1_APP_ID,p_page_id=>null);',
 '      '))
 ,p_error_display_location=>'INLINE_IN_NOTIFICATION'
 ,p_process_when_button_id=>wwv_flow_api.id(14520991463010703)
@@ -7946,7 +7980,11 @@ end;
 /
 prompt --application/deployment/definition
 begin
-null;
+wwv_flow_api.create_install(
+ p_id=>wwv_flow_api.id(14800147707312138)
+,p_required_free_kb=>100
+,p_required_sys_privs=>'CREATE PROCEDURE:CREATE TABLE:CREATE TRIGGER:CREATE VIEW'
+);
 end;
 /
 prompt --application/deployment/install
@@ -7956,7 +7994,22 @@ end;
 /
 prompt --application/deployment/checks
 begin
-null;
+wwv_flow_api.create_install_check(
+ p_id=>wwv_flow_api.id(14800355616325093)
+,p_install_id=>wwv_flow_api.id(14800147707312138)
+,p_name=>'Check grants to WWV_FLOW_THEME_MANAGER'
+,p_sequence=>10
+,p_check_type=>'EXISTS'
+,p_check_condition=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+'select * ',
+'from user_objects ',
+'where object_name = ''WWV_FLOW_THEME_MANAGER'' ',
+'and object_type = ''SYNONYM''',
+''))
+,p_failure_message=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+'Synonym for WWV_FLOW_THEME_MANAGER not found.',
+'Please see Readme.md for Grants Generator!'))
+);
 end;
 /
 prompt --application/deployment/buildoptions
